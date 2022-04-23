@@ -1,15 +1,21 @@
-# Real-time-object-detection-with-deep-learning-and-OpenCV
-This project is the implementation of Real-time Object detection in video with deep learning and OpenCV.
+<h1 align="center">
+     AI Project
+</h1>
 
-### Sourcerer [![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/0)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/0)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/1)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/1)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/2)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/2)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/3)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/3)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/4)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/4)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/5)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/5)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/6)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/6)[![](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/images/7)](https://sourcerer.io/fame/ParthPathak27/ParthPathak27/Real-time-object-detection-with-deep-learning-and-OpenCV/links/7)
+## Object Detection Using Deep Learning
 
-To build our deep learning-based real-time object detector with OpenCV we’ll need to 
-1. access our webcam/video stream in an efficient manner and 
-2. apply object detection to each frame.
+--prototxt : The path to the Caffe prototxt file.<br>
+--model : The path to the pre-trained model.<br>
+--confidence : The minimum probability threshold to filter weak detections. The default is 20%.<br>
 
-The real-time deep-learning based object detector in action,
+To build our deep learning-based real-time object detector with OpenCV we’ll need to access our webcam/video stream in an efficient manner and apply object detection to each frame.<br>
 
-![Screenshot](/demo/demo.png)
+
+The command to run the program:<br>
+python real_time_object_detection.py --prototxt MobileNetSSD_deploy.prototxt.txt --model MobileNetSSD_deploy.caffemodel
+
+![image](https://user-images.githubusercontent.com/54464202/164868920-a4813906-afd2-4dcf-ba5e-b92f16d56f95.png)
+
 
 
 
