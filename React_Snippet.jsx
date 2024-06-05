@@ -31,3 +31,31 @@ const MyComponent = ({ initialQuery }) => {
 };
 
 export default MyComponent;
+
+
+from jira import JIRA
+import requests
+import os
+
+try:
+    server_url = 'https://your-jira-instance.atlassian.net'
+    email = 'your-email@example.com'
+    api_token = 'your-api-token'
+
+    jira = JIRA(server=server_url, basic_auth=(email, api_token))
+
+    main_issue_dict = {
+        'project': {'key': 'PROJ'},
+        'summary': 'Main Issue Summary',
+        'description': 'Description of the main issue.',
+        'issuetype': {'name': 'Story'},
+    }
+
+    main_issue = jira.create_issue(fields=main_issue_dict)
+    print(f"Created main issue {main_issue.key}")
+
+except requests.exceptions.RequestException as e:
+    print(f"An error occurred: {e}")
+    if hasattr(e, 'response'):
+        print(f"Response content: {e.response.content}")
+
