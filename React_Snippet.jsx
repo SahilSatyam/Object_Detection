@@ -792,4 +792,227 @@ export default function AppLevelRetnRem() {
         </div>
     )
 }
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// AppLevelRetnRem.test.js
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import { BrowserRouter as Router } from 'react-router-dom';
+import AppLevelRetnRem from './AppLevelRetnRem';
+import * as Utils from '../../Utils';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+
+jest.mock('../../Utils', () => ({
+  joinRowsAndColumns: jest.fn(),
+}));
+
+jest.mock('xlsx', () => ({
+  utils: {
+    book_new: jest.fn(),
+    json_to_sheet: jest.fn(),
+    sheet_add_aoa: jest.fn(),
+    sheet_add_json: jest.fn(),
+    book_append_sheet: jest.fn(),
+    writeFile: jest.fn(),
+  },
+}));
+
+jest.mock('jspdf', () => {
+  return jest.fn().mockImplementation(() => ({
+    setFontSize: jest.fn(),
+    setFont: jest.fn(),
+    text: jest.fn(),
+    autoTable: jest.fn(),
+    save: jest.fn(),
+  }));
+});
+
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve([]),
+  })
+);
+
+describe('AppLevelRetnRem Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('renders without crashing', () => {
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+    expect(screen.getByTestId('app-level-retn-rem-dashboard-title-text')).toBeInTheDocument();
+  });
+
+  test('displays loading spinner during API call', async () => {
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+    expect(screen.getByTestId('app-levl-retn-rem-mds-progress-spinner')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('app-levl-retn-rem-mds-progress-spinner')).not.toBeInTheDocument());
+  });
+
+  test('handles data fetch and state updates', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes' },
+      { APPL_SYS_ID: '2', TYPE_CD: 'B', LGL_HLD_STS: 'NO', APPROVED_EXTENDED_RETENTION: 'No', APPL_LVL_CLS_CD_COMP_IND: 'No' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+    expect(screen.getByTestId('app-level-retn-rem-dashboard-total-apps-tile')).toHaveTextContent('2');
+    expect(screen.getByTestId('app-level-retn-rem-dashboard-total-obr-count-tile')).toHaveTextContent('0');
+    expect(screen.getByTestId('app-level-retn-rem-dashboard-total-active-legal-hold-count-tile')).toHaveTextContent('1');
+  });
+
+  test('applies filters correctly', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes' },
+      { APPL_SYS_ID: '2', TYPE_CD: 'B', LGL_HLD_STS: 'NO', APPROVED_EXTENDED_RETENTION: 'No', APPL_LVL_CLS_CD_COMP_IND: 'No' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByLabelText('Legal Hold Filter'));
+    expect(screen.getByLabelText('Legal Hold Filter')).toBeChecked();
+    expect(screen.getByText('Total Applications')).toHaveTextContent('1');
+  });
+
+  test('exports data to Excel', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes', CRE_TS: '2022-01-01T00:00:00Z' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText('Excel'));
+    expect(XLSX.utils.book_new).toHaveBeenCalled();
+    expect(XLSX.writeFile).toHaveBeenCalled();
+  });
+
+  test('exports data to PDF', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes', CRE_TS: '2022-01-01T00:00:00Z' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText('PDF'));
+    expect(jsPDF).toHaveBeenCalled();
+  });
+
+  test('handles row click to navigate', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+
+    const rows = screen.getAllByRole('row');
+    fireEvent.click(rows[1]);
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  test('handles API errors gracefully', async () => {
+    global.fetch.mockImplementationOnce(() => Promise.reject('API is down'));
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(screen.queryByTestId('app-levl-retn-rem-mds-progress-spinner')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('app-level-retn-rem-dashboard-title-text')).toBeInTheDocument();
+  });
+
+  test('renders empty state correctly', async () => {
+    global.fetch.mockImplementationOnce(() => Promise.resolve({ json: () => Promise.resolve([]) }));
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+    expect(screen.getByText('No Data Found')).toBeInTheDocument();
+  });
+
+  test('toggles Legal Hold Filter', async () => {
+    const mockData = [
+      { APPL_SYS_ID: '1', TYPE_CD: 'A', LGL_HLD_STS: 'YES', APPROVED_EXTENDED_RETENTION: 'Yes', APPL_LVL_CLS_CD_COMP_IND: 'Yes' }
+    ];
+    Utils.joinRowsAndColumns.mockReturnValue(mockData);
+
+    render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+
+    await waitFor(() => expect(Utils.joinRowsAndColumns).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByLabelText('Legal Hold Filter'));
+    expect(screen.getByLabelText('Legal Hold Filter')).toBeChecked();
+    expect(screen.getByText('Total Applications')).toHaveTextContent('1');
+
+    fireEvent.click(screen.getByLabelText('Legal Hold Filter'));
+    expect(screen.getByLabelText('Legal Hold Filter')).not.toBeChecked();
+    expect(screen.getByText('Total Applications')).toHaveTextContent('1');
+  });
+
+  test('matches snapshot', () => {
+    const { asFragment } = render(
+      <Router>
+        <AppLevelRetnRem />
+      </Router>
+    );
+    expect(asFragment()).toMatchSnapshot();
+  });
+});
+
   
