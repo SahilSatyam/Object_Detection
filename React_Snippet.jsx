@@ -1,3 +1,473 @@
+import React, {useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {MdsDataTableForAccounts, MdsProgressSpinner, MdsTile, MdsIcon, MdsButton, MdsSwitch, MdsMultiselect, MdsMultiselectOption} from '@mds/react';
+import * as XLSX from "xlsx";
+import moment from 'moment-timezone';
+import jsPDF from "jspdf";
+import 'jspdf-autotable';
+import "../../styles/Reports/AppLevelRetnRem.css"
+import {joinRowsAndColumns} from "../../Utils";
+import RetentionRemediationDashboardConfig from "../../config/RetentionRemediationDashboard.json";
+
+let APP_LEVEL_RETENTION_REMEDIATION_API = process.env.REACT_APP_APPL_LEVEL_RETENTION_REMEDIATION_API
+let ASET_LEVEL_RETENTION_REMEDIATION_API = process.env.REACT_APP_ASET_LEVEL_RETENTION_REMEDIATION_API
+
+export default function AppLevelRetnRem() {
+    const [data, setData] = useState([]);
+    // const [currentPage, setCurrentPage] = useState(1);
+    
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = useCallback(() => {
+        setSpinnerOn(true);
+        fetch(`${APP_LEVEL_RETENTION_REMEDIATION_API}`)
+           .then(response => response.json())
+           .then(data => {
+                const combinedData = joinRowsAndColumns(data);
+                setData(combinedData);
+                setSpinnerOn(false);
+                setAppLevelExportData(true);
+            })
+            .catch(err => {
+                console.error("Error fetching data:", err);
+                setSpinnerOn(false);
+            })
+    }, []);
+
+    const fetchData = useCallback(() => {
+        setSpinnerOn(true);
+        fetch(`${APP_LEVEL_RETENTION_REMEDIATION_API}`)
+           .then(response => response.json())
+           .then(data => {
+                const combinedData = joinRowsAndColumns(data);
+                setData(combinedData);
+                setSpinnerOn(false);
+                // Additional logic...
+            })
+           .catch(err => {
+                console.error("Error fetching data:", err);
+                setSpinnerOn(false);
+            });
+    }, []);
+
+    // Update filters state based on changes
+    const updateFilters = useCallback((newFilters) => {
+        setFilters(newFilters);
+    }, []);
+    }, []);
+
+    // const pageSize = 12;
+    // const totalItems = appLevelRetnRemFilteredData.length;
+    // const pageCount = Math.ceil(totalItems / pageSize);
+
+    // const handlePreviousPage = () => {
+    //     setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+    // };
+    // const handleNextPage = () => {
+    //     setCurrentPage((prevPage) => Math.min(prevPage + 1, pageCount));
+    // };
+    // const renderPageNumbers = () => {
+    //     const visiblePage = 5;
+    //     const sideDots = 2;
+
+    //     let startPage = currentPage - Math.floor(visiblePage / 2);
+    //     startPage = Math.max(startPage, 1)
+    //     const endPage = Math.min(startPage + visiblePage - 1, pageCount);
+
+    //     let pageNumbers = [];
+    //     if (currentPage > sideDots + 1) {
+    //     pageNumbers.push(1);
+    //     if (currentPage > sideDots + 2) {
+    //         pageNumbers.push('dots');
+    //     }
+    //     }
+    //     for (let i = startPage; i <= endPage; i++) {
+    //     pageNumbers.push(i);
+    //     }
+    //     if (currentPage < pageCount - sideDots) {
+    //     if (currentPage < pageCount - sideDots - 1) {
+    //         pageNumbers.push('dots');
+    //     }
+    //     pageNumbers.push(pageCount);
+    //     }
+    //     return pageNumbers.map((pageNumber, index) => {
+    //     if (pageNumber === 'dots') {
+    //         return <span key={`dots${index}`} className="dots">...</span>;
+    //     }
+    //     return (
+    //     <div
+    //         key={pageNumber}
+    //         className={`slider-item ${currentPage === pageNumber ? "active" : ""}`}
+    //         onClick={() => setCurrentPage(pageNumber)}
+    //         >
+    //         <div data-testid={`page-${pageNumber}`}>{pageNumber}</div>
+    //         </div>
+    //     );
+    //     });
+    // };
+
+    useEffect(() => {
+        const applicationsCount = data.length;
+        setApplicationsCount(applicationsCount);
+        const obrClassCodeCount = data.filter(item => item["HAS_OBR"] === 'Yes').length;
+        setObrClassCodeCount(obrClassCodeCount);
+        const activeLegalHoldCount = data.filter(item => item["LGL_HLD_STS"] === 'YES').length; // From API We get "YES" but in ui We Replace as "Yes"
+        setActiveLegalHoldCount(activeLegalHoldCount);
+
+    }, [data]);
+
+    useEffect(() => {
+        if (appIDQuery.length === 0 &&
+            typeQuery.length === 0 &&
+            legalHoldFilter === "" &&
+            approvedExtendedRetentionFilter === "" &&
+            classCodeComparisonFilter === ""){
+            setAppLevelRetnRemFilteredData(data);
+        } else {
+            const filtered = data.filter(item => {
+                const appID = String(item["APPL_SYS_ID"]);
+                const type = String(item["TYPE_CD"]);
+
+                const appIDMatch = appIDQuery.length === 0 || appIDQuery.some(selectedType => selectedType === appID);
+                const typeMatch = typeQuery.length === 0 || typeQuery.some(selectedType => selectedType === type);
+                const legalHoldMatch = String(item["LGL_HLD_STS"]).toLowerCase().startsWith(legalHoldFilter.toLowerCase());
+                const approvedExtendedRetentionMatch = String(item["APPROVED_EXTENDED_RETENTION"]).toLowerCase().startsWith(approvedExtendedRetentionFilter.toLowerCase());
+                const classCodeComparisonMatch = String(item["APPL_LVL_CLS_CD_COMP_IND"]).toLowerCase().startsWith(classCodeComparisonFilter.toLowerCase());
+
+                return(appIDMatch && typeMatch && legalHoldMatch && approvedExtendedRetentionMatch && classCodeComparisonMatch);
+        });
+            setAppLevelRetnRemFilteredData(filtered);
+        }
+    }, [data, appIDQuery, typeQuery, legalHoldFilter, approvedExtendedRetentionFilter, classCodeComparisonFilter]);
+
+    const mdsTileContent = [
+        {
+            testid: "app-level-retn-rem-dashboard-total-apps-tile",
+            title: 'Total Applications',
+            calculations: applicationsCount
+        },
+        {
+            testid: "app-level-retn-rem-dashboard-total-obr-count-tile",
+            title: 'Applications having OBR Class Codes',
+            calculations: obrClassCodeCount
+        },
+        {
+            testid: "app-level-retn-rem-dashboard-total-active-legal-hold-count-tile",
+            title: 'Applications on Legal Hold',
+            calculations: activeLegalHoldCount
+        },
+    ];
+
+    const mdsMultiSelectComponentForAppID = []
+    const mdsMultiSelectComponentForType = []
+
+    data.forEach((row) => {
+        if (!mdsMultiSelectComponentForAppID.some(item => item.value === row.APPL_SYS_ID)) {
+            mdsMultiSelectComponentForAppID.push({
+            label: row.APPL_SYS_ID,
+            value: row.APPL_SYS_ID
+        });}
+        if (!mdsMultiSelectComponentForType.some(item => item.value === row.TYPE_CD)) {
+            mdsMultiSelectComponentForType.push({
+            label: row.TYPE_CD,
+            value: row.TYPE_CD
+        });}
+    });
+
+    const exportToExcel = (csvData) => {
+        const convertToEST = (utcTime) => {
+          return moment.utc(utcTime).tz("America/New_York").format('DD MMMM YYYY HH:mm:ss');
+        }
+        const dataWithEST = csvData.map(item => {
+          return {
+            ...item,
+            CRE_TS: item.CRE_TS ? convertToEST(item.CRE_TS) : item.CRE_TS,
+          }});
+    
+        const columnNames = [['Product Group', 'Product', 'Application ID', 'Application Name', 'Application State', 'Application Owner SID', 'Application Owner Name',
+        'Info Owner SID', 'Info Owner Name', 'Data Owner SID', 'Data Owner Name', 'Overall Hosting Type', 'Legal Hold Status', 'Retention Status', 'Destruction Status', 'OBR v/s Non-OBR', 'Has OBR', 'Approved Extended Retention',
+        'Actual Operate Date', 'Overall Earliest Destruction Eligible Date', 'Purge Eligible', 'Time Remaining', 'DataFit Approver Check', 'DB Growth Data Purge Flag', 'Class Code Comparison', 'Report Generated On']]
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet([]);
+        XLSX.utils.sheet_add_aoa(ws, columnNames);
+    
+        XLSX.utils.sheet_add_json(ws, dataWithEST, { origin: 'A2', skipHeader: true });
+        XLSX.utils.book_append_sheet(wb, ws, 'Data');
+        XLSX.writeFile(wb, 'Retention Remediation App Level.xlsx');
+      };
+
+    const reportGeneratedTime = appLevelExportData ? moment.utc(data[0].CRE_TS).tz("America_New_York").format("DD MMMM YYYY HH:mm:ss") + ' EST' : '-';
+    const exportToPDF = (pdfData) => {
+        const doc = new jsPDF("landscape", "pt", "A2");
+        doc.setFontSize(20);
+        doc.setFont("Times New Roman");
+        const title = "Retention Remediation Report";
+        doc.text(title, 850, 30, { align: 'center' });
+        doc.setFontSize(14);
+        const refreshedDataText = "Report Generated On: " + reportGeneratedTime;
+        doc.text(refreshedDataText, 40, 30, { align: 'left' });
+
+        const headers = [['Product Group', 'Product', 'Application ID', 'Application Name', 'Application State', 'Application Owner', 'Info Owner', 'Data Owner', 
+        'Overall Hosting Type', 'Legal Hold Status', 'Retention Status', 'Destruction Status', 'OBR v/s Non-OBR', 'Has OBR', 'Approved Extended Retention',
+        'Actual Operate Date', 'Overall Earliest Destruction Eligible Date', 'Purge Eligible', 'Time Remaining', 'DataFit Approver Check', 'DB Growth Data Purge Flag','Class Code Comparison']];
+        const PDFData = pdfData.map(
+        row=> [row.LOB_FCTN_NM, row.PROD_NM, row.APPL_SYS_ID, row.APPL_SYS_NM, row.APPL_SYS_STS_NM, row.APPL_OWNR_SID,
+            row.INFO_OWNR_SID, row.DATA_OWNR_SID, row.OVRL_HOST_TYPE_NM, row.LGL_HLD_STS, row.DATA_RQR_DOC_STS_CD,
+            row.DD_STS_CD, row.TYPE_CD, row.HAS_OBR, row.APPROVED_EXTENDED_RETENTION, row.ACTL_OPER_DT,
+            row.OVRL_ERLST_DESTR_ELIG_DT, row.PURGE_ELIGIBLE, row.TIME_REMAINING, row.DATAFIT_APPROVER_CHECK,
+            row.APPL_LVL_FLAG, row.APPL_LVL_CLS_CD_COMP_IND]);
+
+        let content = {
+        startY: 50,
+        styles: {overflow: 'linebreak'},
+        columnStyles: { 10: { cellWidth: 150 } }, // Specify the column Number (start from 0) where Max Space is used.
+        head: headers,
+        body: PDFData
+        };
+
+        doc.setFontSize(12);
+        doc.autoTable(content);
+        doc.save("Retention Remediation App Level.pdf");
+    };
+
+  function handleAppLevelClick(appLevelRetnRemFilteredData, rowIndex) {
+    rowIndex = rowIndex - 1;
+      fetch(
+        `${ASET_LEVEL_RETENTION_REMEDIATION_API}` +
+        "?appl_sys_id=" +
+        appLevelRetnRemFilteredData[rowIndex]["APPL_SYS_ID"]
+      )
+        .then(setSpinnerOn(true))
+        .then((response) => response.json())
+        .then((data) => {
+          const combinedData = joinRowsAndColumns(data);
+          setSpinnerOn(false);
+          navigate("/aset-level-retn-rem-dashboard", {state: combinedData});
+        })
+        .catch(err => {
+          console.log("Error while fetching Aset Level Data on row click: ", err)
+          setSpinnerOn(false)
+        })
+  }
+
+    return (
+        <div className="app-level-retn-rem-dashboard">
+            <div className="app-level-retn-rem-dashboard-title">
+                <p data-testid="app-level-retn-rem-dashboard-title-text" className="app-level-retn-rem-dashboard-title-text">Retention Remediation Dashboard</p>
+            </div>
+            <div data-testid="app-level-retn-rem-dashboard-tiles" className="app-level-retn-rem-dashboard-tiles">
+                {mdsTileContent.map((tile, index) => (
+                    <MdsTile
+                        key={index}
+                        data-testid={tile.testid}
+                        tileTitle={tile.title}
+                        hideTitle={false}
+                        interactive={false}
+                        variant="classic"
+                        horizontalPadding="regular"
+                        backgroundColor="#000000">
+                        <div slot="tile-content">
+                            {tile.calculations}
+                        </div>
+                    </MdsTile>
+                ))}
+            </div>
+                <div className="app-level-retn-rem-dashboard-filters">
+                    <div className="multiselect">
+                        <div className="multiselect-values">
+                            <MdsMultiselect
+                                id='demo-multiselect'
+                                name='demo-multiselect'
+                                variant="line"
+                                label="Application ID"
+                                state='active'
+                                placeholder='Select Application IDs'
+                                onChange={(e) => {
+                                    setAppIDQuery(e.target.value);
+                                }}
+                                >
+                                {mdsMultiSelectComponentForAppID.map((multiSelect, index) => (
+                                    <MdsMultiselectOption
+                                            key={index}
+                                            id='multi-select-option-1'
+                                            state= "hovered"
+                                            label={multiSelect.label}
+                                            value={multiSelect.value}
+                                    ></MdsMultiselectOption>
+                                ))}
+                            </MdsMultiselect>
+                        </div>
+                    </div>
+                    <div className="multiselect">
+                        <div className="multiselect-values">
+                            <MdsMultiselect
+                                id='demo-multiselect'
+                                name='demo-multiselect'
+                                variant="line"
+                                label="OBR v/s Non-OBR"
+                                state='active'
+                                placeholder='Select Types'
+                                onChange={(e) => {setTypeQuery(e.target.value);}}
+                                >
+                                {mdsMultiSelectComponentForType.map((multiSelect, index) => (
+                                    <MdsMultiselectOption
+                                            key={index}
+                                            id='multi-select-option-1'
+                                            label={multiSelect.label}
+                                            value={multiSelect.value}
+                                    ></MdsMultiselectOption>
+                                ))}
+                            </MdsMultiselect>
+                        </div>
+                    </div>
+                    <div className="app-level-retn-rem-legal-hold-filter">
+                        <MdsSwitch
+                            data-testid="app-level-retn-rem-legal-hold-filter-switch"
+                            label="Legal Hold Filter"
+                            stateLabelOn="On"
+                            stateLabelOff="Off"
+                            onChange={() => {
+                                legalHoldFilter === "Yes" ? setLegalHoldFilter("") : setLegalHoldFilter("Yes");
+                            }}
+                        ></MdsSwitch>
+                    </div>
+                    <div className="app-level-retn-rem-approved-extended-retn-filter">
+                        <MdsSwitch
+                            data-testid="app-level-retn-rem-approved-extended-retn-filter-switch"
+                            label="Approved Extended Retention Filter"
+                            stateLabelOn="On"
+                            stateLabelOff="Off"
+                            onChange={() => {
+                                approvedExtendedRetentionFilter === "Yes" ? setApprovedExtendedRetentionFilter("") : setApprovedExtendedRetentionFilter("Yes");
+                            }}
+                        ></MdsSwitch>
+                    </div>
+                    <div className="app-level-retn-rem-class_code_comp-filter">
+                        <MdsSwitch
+                            data-testid="app-level-retn-rem-class_code_comp-filter-switch"
+                            label="Class Code Comparison Filter"
+                            stateLabelOn="On"
+                            stateLabelOff="Off"
+                            onChange={() => {
+                                classCodeComparisonFilter === "Yes" ? setClassCodeComparisonFilter("") : setClassCodeComparisonFilter("Yes");
+                            }}
+                        ></MdsSwitch>
+                    </div>
+                    <div className="app-level-retn-rem-export-options">
+                        <MdsButton
+                            data-testid="db-growth-report-excel-export-data-button"
+                            text="Excel"
+                            variant="secondary"
+                            widthType="content"
+                            type="button"
+                            onClick={() => exportToExcel(appLevelRetnRemFilteredData)}
+                            />
+                        <MdsButton
+                            data-testid="app-level-retn-rem-pdf-export-data-button"
+                            text="PDF"
+                            variant="secondary"
+                            widthType="content"
+                            type="button"
+                            onClick={() => exportToPDF(appLevelRetnRemFilteredData)}
+                            />
+                    </div>
+                </div>
+            <div className="top-line-for-app-level-retn-rem-dashboard-table"/>
+            <div className="app-level-retn-rem-datatable">
+                <center>
+                    <MdsDataTableForAccounts
+                        caption="Application Level Retention Remediation Dashboard"
+                        hasVisibleCaption={false}
+                        hasHoverColor={true}
+                        mode="compact"
+                        layout="column"
+                        columnConfigs={RetentionRemediationDashboardConfig.AppLevelRetentionRemediationReportColumns}
+                        rowData={ appLevelRetnRemFilteredData.map(row => (
+                            // appLevelRetnRemFilteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(row => (
+                                    [
+                                        {value: String(row["LOB_FCTN_NM"])},
+                                        {value: String(row["PROD_NM"])},
+                                        {value: String(row["APPL_SYS_ID"])},
+                                        {value: String(row["APPL_SYS_NM"])},
+                                        {value: String(row["APPL_SYS_STS_NM"])},
+                                        {value: String(row["APPL_OWNR_SID"])},
+                                        {value: String(row["INFO_OWNR_SID"])},
+                                        {value: String(row["DATA_OWNR_SID"])},
+                                        {value: String(row["OVRL_HOST_TYPE_NM"])},
+                                        {value: row["LGL_HLD_STS"] ? String(row["LGL_HLD_STS"]).replace("NO", "No").replace("YES", "Yes") : "-"},
+                                        {value: String(row["DATA_RQR_DOC_STS_CD"])},
+                                        {value: String(row["DD_STS_CD"])},
+                                        {value: row["TYPE_CD"] ? String(row["TYPE_CD"]) : "-"},
+                                        {value: String(row["HAS_OBR"])},
+                                        {value: row["APPROVED_EXTENDED_RETENTION"] ? String(row["APPROVED_EXTENDED_RETENTION"]) : "-"},
+                                        {value: row["ACTL_OPER_DT"] ? String(row["ACTL_OPER_DT"]) : "-" },
+                                        {value: row["OVRL_ERLST_DESTR_ELIG_DT"] ? String(row["OVRL_ERLST_DESTR_ELIG_DT"]) : "-"},
+                                        {value: String(row["PURGE_ELIGIBLE"])},
+                                        {value: row["TIME_REMAINING"] ? String(row["TIME_REMAINING"]) : "-"},
+                                        {value: String(row["DATAFIT_APPROVER_CHECK"])},
+                                        {value: row["APPL_LVL_FLAG"] ? String(row["APPL_LVL_FLAG"]) : "-"},
+                                        {value: String(row["APPL_LVL_CLS_CD_COMP_IND"]),
+                                            "alertMessage": {
+                                                "title": "",
+                                                "variant": String(row["APPL_LVL_CLS_CD_COMP_IND"]) === "Yes" ? "success" : "error",
+                                                "accessibleTextIcon": String(row["APPL_LVL_CLS_CD_COMP_IND"]) === "Yes" ? "success icon" : "error icon"
+                                            }
+                                        },
+                                        {buttonItems: [
+                                            {
+                                                tooltipText: "Data Store Info",
+                                                icon: "ico_chevron_circle_right",
+                                            }],
+                                        },
+                                    ]
+                                )
+                            )
+                        }
+                        nullStateMessage="No Data Found"
+                        onClick={(e) => handleAppLevelClick(appLevelRetnRemFilteredData, e.detail.rowIndex)}
+                        rowStyle="solid"
+                    />
+                </center>
+            </div>
+            {/* <div className="pagination-wrapper">
+                <MdsIcon
+                data-testid="previous-icon"
+                size="20"
+                color="default"
+                type="ico_double_arrow_left"
+                removeHorizontalMargin="false"
+                onClick={handlePreviousPage}>
+                </MdsIcon>
+                <div className="slider">
+                {renderPageNumbers()}
+                </div>
+                <MdsIcon
+                data-testid="next-icon"
+                size="20"
+                color="default"
+                type="ico_double_arrow_right"
+                removeHorizontalMargin="false"
+                onClick={handleNextPage}>
+                </MdsIcon>
+            </div> */}
+            {spinnerOn && <MdsProgressSpinner
+                data-testid="app-levl-retn-rem-mds-progress-spinner"
+                loadingLabel="Loading Data..."
+                microcopy="microcopy"
+                inverse={false}
+                open={spinnerOn}
+            />}
+        </div>
+    );
+}
+
+
+
 import React, {useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {MdsDataTableForAccounts, MdsProgressSpinner, MdsTile, MdsIcon, MdsButton, MdsSwitch, MdsMultiselect, MdsMultiselectOption} from '@mds/react';
