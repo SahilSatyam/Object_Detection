@@ -1015,4 +1015,167 @@ describe('AppLevelRetnRem Component', () => {
   });
 });
 
+////////////////////////////////////////////////////////////////////////////////////////
+
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import AppLevelRetnRem from './AppLevelRetnRem';
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useLocation: jest.fn(),
+  useNavigate: jest.fn(),
+}));
+
+const mockData = [
+  {
+    ASET_ID: '123',
+    ASET_NM: 'Test Data Store',
+    CLS_CD_COMPARISION_IND: 'Yes',
+    APPL_SYS_ID: 'App123',
+    APPL_SYS_NM: 'Test Application',
+    APPL_OWNR_NM: 'Owner Name',
+    APPL_OWNR_SID: 'OwnerSID',
+    INFO_OWNR_NM: 'Info Owner Name',
+    INFO_OWNR_SID: 'InfoOwnerSID',
+    DATA_OWNR_NM: 'Data Owner Name',
+    DATA_OWNR_SID: 'DataOwnerSID',
+    CALC_ERLST_DESTR_ELIG_DT: '2024-06-01',
+    OVRL_ERLST_DESTR_ELIG_DT: '2024-06-01',
+    TIME_REMAINING: '6 months',
+    HAS_DESTR_ELIG_DATA: 'Yes',
+    APPROVED_EXTENDED_RETENTION: 'Yes',
+    EXTENDED_RETENTION_DT: '2024-12-01',
+    REQ_DESTR_PROC_FREQ: 'Monthly',
+    DESTR_ENBL: 'Yes',
+  },
+];
+
+describe('AppLevelRetnRem', () => {
+  beforeEach(() => {
+    useLocation.mockReturnValue({ state: mockData });
+    useNavigate.mockReturnValue(jest.fn());
+  });
+
+  test('renders correctly', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Retention Remediation Dashboard/i)).toBeInTheDocument();
+  });
+
+  test('filters data based on input', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    const input = screen.getByPlaceholderText(/Search By Data Store ID/i);
+    fireEvent.change(input, { target: { value: '123' } });
+
+    expect(screen.getByDisplayValue('123')).toBeInTheDocument();
+  });
+
+  test('clears input when clear button is clicked', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    const input = screen.getByPlaceholderText(/Search By Data Store ID/i);
+    fireEvent.change(input, { target: { value: '123' } });
+
+    const clearButton = screen.getAllByRole('button', { name: /✖/i })[0];
+    fireEvent.click(clearButton);
+
+    expect(screen.getByPlaceholderText(/Search By Data Store ID/i)).toHaveValue('');
+  });
+
+  test('toggles class code comparison filter', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    const switchButton = screen.getByTestId('mds-switch');
+    fireEvent.click(switchButton);
+
+    expect(screen.getByTestId('mds-switch')).toHaveAttribute('data-checked', 'false');
+  });
+
+  test('exports data to PDF when button is clicked', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    const pdfButton = screen.getByText(/PDF/i);
+    fireEvent.click(pdfButton);
+
+    // Mock implementation of jsPDF is needed to fully test this.
+    // You can add further assertions to check if the jsPDF method was called.
+  });
+
+  test('displays data table correctly', () =>
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Test Application/i)).toBeInTheDocument();
+    expect(screen.getByText(/Test Data Store/i)).toBeInTheDocument();
+    expect(screen.getByText(/Owner Name/i)).toBeInTheDocument();
+  });
+
+  test('navigates to app-level dashboard on back button click', () => {
+    const navigate = useNavigate();
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    const backButton = screen.getByRole('img', { name: /chevron circle left/i });
+    fireEvent.click(backButton);
+
+    expect(navigate).toHaveBeenCalledWith('/app-level-retn-rem-dashboard');
+  });
+
+  test('renders all MdsTile components correctly', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('aset-level-retn-rem-dashboard-total-aset')).toBeInTheDocument();
+    expect(screen.getByTestId('aset-level-retn-rem-dashboard-matching-aset')).toBeInTheDocument();
+    expect(screen.getByTestId('aset-level-retn-rem-dashboard-not-matching-aset')).toBeInTheDocument();
+  });
+
+  test('renders description list correctly', () => {
+    render(
+      <MemoryRouter>
+        <AppLevelRetnRem />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Calculated Earliest Destruction Eligible Date/i)).toBeInTheDocument();
+    expect(screen.getByText(/Overall Earliest Destruction Eligible Date/i)).toBeInTheDocument();
+    expect(screen.getByText(/Time Remaining/i)).toBeInTheDocument();
+    expect(screen.getByText(/Has Destruction Eligible Data/i)).toBeInTheDocument();
+  });
+});
+
+
   
